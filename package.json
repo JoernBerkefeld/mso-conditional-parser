@@ -1,0 +1,63 @@
+{
+    "name": "mso-conditional-parser",
+    "version": "1.0.0",
+    "description": "Parser and translator for MSO (Outlook) conditional comments in HTML email",
+    "type": "module",
+    "main": "src/index.js",
+    "exports": {
+        ".": "./src/index.js"
+    },
+    "files": [
+        "src",
+        "LICENSE"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/JoernBerkefeld/mso-conditional-parser.git"
+    },
+    "bugs": {
+        "url": "https://github.com/JoernBerkefeld/mso-conditional-parser/issues"
+    },
+    "homepage": "https://github.com/JoernBerkefeld/mso-conditional-parser#readme",
+    "author": "Joern Berkefeld",
+    "license": "MIT",
+    "keywords": [
+        "mso",
+        "outlook",
+        "email",
+        "conditional-comments",
+        "html-email",
+        "parser"
+    ],
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "scripts": {
+        "test": "node --test tests/parser.test.mjs",
+        "lint": "eslint src tests",
+        "lint:fix": "eslint --fix src tests",
+        "prepare": "husky || true",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.1.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-jsdoc": "^62.0.0",
+        "eslint-plugin-prettier": "^5.5.0",
+        "eslint-plugin-unicorn": "^64.0.0",
+        "globals": "^17.4.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^17.0.5",
+        "prettier": "^3.8.2"
+    },
+    "lint-staged": {
+        "*.{js,mjs,cjs}": [
+            "eslint --fix"
+        ]
+    },
+    "volta": {
+        "node": "22.15.0"
+    }
+}
