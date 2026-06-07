@@ -69,6 +69,14 @@ export function translateCondition(condition) {
         return 'non-Outlook email clients';
     }
 
+    if (trimmed === 'IE') {
+        return 'Internet Explorer';
+    }
+
+    if (trimmed === '!IE') {
+        return 'non-Internet Explorer clients';
+    }
+
     // Compound conditions with & or |
     if (trimmed.includes('&') || trimmed.includes('|')) {
         const separator = trimmed.includes('&') ? ' AND ' : ' OR ';
@@ -126,33 +134,44 @@ export function translateCondition(condition) {
 }
 
 /**
- * Validates an MSO condition string and returns an error message if invalid.
+ * Assesses a conditional comment expression.
  *
- * @param {string} condition - The raw condition string extracted from the comment.
- * @returns {string|null} Error message or null if valid.
+ * @param {string} condition - Raw condition text from an opener.
+ * @returns {{ error: string, fix?: string } | null} Assessment result, or null when valid.
  */
-function validateCondition(condition) {
+function assessCondition(condition) {
     const trimmed = condition.trim();
 
-    // Check for common typo: "mos" instead of "mso"
     if (/\bmos\b/i.test(trimmed)) {
-        return "Typo detected: 'mos' should be 'mso'";
+        return {
+            error: "Use the keyword 'mso', not 'mos'",
+            fix: trimmed.replaceAll(/\bmos\b/gi, 'mso'),
+        };
     }
 
     // Compound: validate each part individually
     if (trimmed.includes('&') || trimmed.includes('|')) {
         const parts = trimmed.split(/[&|]/).map((p) => p.replaceAll(/[()]/g, '').trim());
         for (const part of parts) {
-            const partError = validateCondition(part);
-            if (partError) {
-                return partError;
+            const partResult = assessCondition(part);
+            if (partResult) {
+                return partResult;
             }
         }
 
         return null;
     }
 
-    if (trimmed === 'mso' || trimmed === '!mso') {
+    if (trimmed === 'mso' || trimmed === '!mso' || trimmed === 'IE' || trimmed === '!IE') {
+        return null;
+    }
+
+    const ieOperatorMatch = trimmed.match(/^(gte|gt|lte|lt|eq)\s+IE\s+\d+$/i);
+    if (ieOperatorMatch) {
+        return null;
+    }
+
+    if (/^IE\s+\d+$/i.test(trimmed)) {
         return null;
     }
 
@@ -161,51 +180,74 @@ function validateCondition(condition) {
     if (operatorVersionMatch) {
         const version = operatorVersionMatch[2];
         if (!VALID_VERSIONS.has(version)) {
-            return `Unknown MSO version: ${version}. Valid versions: ${[...VALID_VERSIONS].join(', ')}`;
+            return {
+                error: `Unknown MSO version ${version}. Use one of: ${[...VALID_VERSIONS].join(', ')}`,
+            };
         }
 
         return null;
     }
 
-    // operator without version — e.g. "gte mso" (missing version number)
     const operatorNoVersionMatch = trimmed.match(/^(gte|gt|lte|lt|eq)\s+mso\s*$/i);
     if (operatorNoVersionMatch) {
-        return `Operator '${operatorNoVersionMatch[1]}' requires a version number (e.g. '${operatorNoVersionMatch[1]} mso 16')`;
+        return {
+            error: `Operator '${operatorNoVersionMatch[1]}' needs a version number (for example '${operatorNoVersionMatch[1]} mso 16')`,
+        };
     }
 
-    // Check if any valid operator is used without mso
     const unknownOpMatch = trimmed.match(/^(\w+)\s+mso(?:\s+(\d+))?$/i);
     if (unknownOpMatch && !VALID_OPERATORS.has(unknownOpMatch[1].toLowerCase())) {
-        return `Unknown operator: '${unknownOpMatch[1]}'. Valid operators: ${[...VALID_OPERATORS].join(', ')}`;
+        return {
+            error: `Unknown operator '${unknownOpMatch[1]}'. Use one of: ${[...VALID_OPERATORS].join(', ')}`,
+        };
     }
 
-    // exact version
     const exactVersionMatch = trimmed.match(/^mso\s+(\d+)$/i);
     if (exactVersionMatch) {
         const version = exactVersionMatch[1];
         if (!VALID_VERSIONS.has(version)) {
-            return `Unknown MSO version: ${version}. Valid versions: ${[...VALID_VERSIONS].join(', ')}`;
+            return {
+                error: `Unknown MSO version ${version}. Use one of: ${[...VALID_VERSIONS].join(', ')}`,
+            };
         }
 
         return null;
     }
 
-    // negation with version
     const negationMatch = trimmed.match(/^!\s*mso\s+(\d+)$/i);
     if (negationMatch) {
         const version = negationMatch[1];
         if (!VALID_VERSIONS.has(version)) {
-            return `Unknown MSO version: ${version}. Valid versions: ${[...VALID_VERSIONS].join(', ')}`;
+            return {
+                error: `Unknown MSO version ${version}. Use one of: ${[...VALID_VERSIONS].join(', ')}`,
+            };
         }
 
         return null;
     }
 
-    if (trimmed === '!mso') {
-        return null;
-    }
+    return { error: `Unrecognized conditional expression: '${trimmed}'` };
+}
 
-    return `Unrecognized MSO condition: '${trimmed}'`;
+/**
+ * Validates an MSO condition string and returns an error message if invalid.
+ *
+ * @param {string} condition - The raw condition string extracted from the comment.
+ * @returns {string|null} Error message or null if valid.
+ */
+export function validateCondition(condition) {
+    const result = assessCondition(condition);
+    return result?.error ?? null;
+}
+
+/**
+ * Returns a replacement condition string when a deterministic fix exists.
+ *
+ * @param {string} condition - The raw condition string extracted from the comment.
+ * @returns {string|null} Fixed condition text, or null when no safe fix is available.
+ */
+export function getConditionFix(condition) {
+    return assessCondition(condition)?.fix ?? null;
 }
 
 /**
@@ -229,13 +271,18 @@ export function parseMsoComment(str) {
     const revealedMatch = REVEALED_OPENER_RE.exec(trimmed);
     if (revealedMatch) {
         const condition = revealedMatch[1].trim();
-        const error = validateCondition(condition);
+        const assessment = assessCondition(condition);
         return {
             type: 'downlevel-revealed',
             condition,
             translation: translateCondition(condition),
-            isValid: !error,
-            ...(error ? { error } : {}),
+            isValid: !assessment,
+            ...(assessment
+                ? {
+                      error: assessment.error,
+                      ...(assessment.fix ? { conditionFix: assessment.fix } : {}),
+                  }
+                : {}),
         };
     }
 
@@ -244,13 +291,18 @@ export function parseMsoComment(str) {
     if (hiddenMatch) {
         const condition = hiddenMatch[1].trim();
         const isRevealed = !!hiddenMatch[2]; // has trailing <!--
-        const error = validateCondition(condition);
+        const assessment = assessCondition(condition);
         return {
             type: isRevealed ? 'downlevel-revealed' : 'downlevel-hidden',
             condition,
             translation: translateCondition(condition),
-            isValid: !error,
-            ...(error ? { error } : {}),
+            isValid: !assessment,
+            ...(assessment
+                ? {
+                      error: assessment.error,
+                      ...(assessment.fix ? { conditionFix: assessment.fix } : {}),
+                  }
+                : {}),
         };
     }
 
