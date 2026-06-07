@@ -4,7 +4,7 @@ Parser and translator for **MSO (Outlook) conditional comments** in HTML email.
 
 Parses all real-world MSO comment patterns, validates conditions against known Outlook versions and operators, and translates them into human-readable English.
 
-Used as the core engine by [`eslint-plugin-mso-conditionals`](https://github.com/JoernBerkefeld/eslint-plugin-mso-conditionals) and the [`MSO Conditional Comments`](https://marketplace.visualstudio.com/items?itemName=joernberkefeld.mso-conditionals) VS Code extension.
+Used as the core engine by [`eslint-plugin-mso`](https://github.com/JoernBerkefeld/eslint-plugin-mso) and the [`MSO Conditional Comments`](https://marketplace.visualstudio.com/items?itemName=joernberkefeld.mso-conditionals) VS Code extension.
 
 ## Installation
 

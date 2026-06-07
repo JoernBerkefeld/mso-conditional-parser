@@ -1,10 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    getConditionFix,
     parseMsoComment,
     parseMsoEndComment,
     isMsoComment,
     translateCondition,
+    validateCondition,
 } from '../src/index.js';
 
 // ── parseMsoComment — downlevel-hidden openers ──────────────────────────────
@@ -116,7 +118,8 @@ describe('parseMsoComment — validation', () => {
     it('flags "mos" typo', () => {
         const result = parseMsoComment('<!--[if mos]>');
         assert.equal(result.isValid, false);
-        assert.ok(result.error.toLowerCase().includes('typo'));
+        assert.ok(result.error.toLowerCase().includes('mso'));
+        assert.equal(result.conditionFix, 'mso');
     });
 
     it('flags operator without version number', () => {
@@ -329,6 +332,25 @@ describe('parseMsoEndComment — type field', () => {
 });
 
 // ── isMsoComment — non-standard revealed form ─────────────────────────────────
+
+describe('validateCondition and IE support', () => {
+    it('accepts legacy IE conditions', () => {
+        assert.equal(validateCondition('IE'), null);
+        assert.equal(validateCondition('!IE'), null);
+        assert.equal(validateCondition('gte IE 7'), null);
+    });
+
+    it('returns a deterministic fix for mos typo', () => {
+        assert.equal(getConditionFix('mos'), 'mso');
+        assert.equal(getConditionFix('gte mos 16'), 'gte mso 16');
+    });
+
+    it('parses <!--[if IE]> as valid', () => {
+        const result = parseMsoComment('<!--[if IE]>');
+        assert.equal(result.isValid, true);
+        assert.equal(result.condition, 'IE');
+    });
+});
 
 describe('isMsoComment — non-standard forms', () => {
     it('returns true for non-standard revealed opener <![if mso]>', () => {
