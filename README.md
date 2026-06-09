@@ -39,7 +39,8 @@ parseMsoComment('<!--[if mos]>');
 //   condition: 'mos',
 //   translation: 'mos',
 //   isValid: false,
-//   error: "Typo detected: 'mos' should be 'mso'"
+//   error: "Use the keyword 'mso', not 'mos'",
+//   conditionFix: 'mso'
 // }
 ```
 
@@ -61,6 +62,33 @@ parseMsoComment('<!--[if mos]>');
 | `translation` | `string` | Human-readable English translation |
 | `isValid` | `boolean` | `true` if the condition is syntactically valid |
 | `error` | `string` | Present when `isValid` is `false` |
+| `conditionFix` | `string` | Optional replacement condition when a safe autofix exists |
+
+---
+
+### `validateCondition(condition)`
+
+Returns an error message for an invalid condition string, or `null` when valid.
+
+```js
+import { validateCondition } from 'mso-conditional-parser';
+
+validateCondition('mos'); // "Use the keyword 'mso', not 'mos'"
+validateCondition('gte mso 16'); // null
+```
+
+---
+
+### `getConditionFix(condition)`
+
+Returns a replacement condition string when a deterministic fix exists (for example `mos` → `mso`), or `null` otherwise.
+
+```js
+import { getConditionFix } from 'mso-conditional-parser';
+
+getConditionFix('mos'); // 'mso'
+getConditionFix('gte mso 16'); // null
+```
 
 ---
 
@@ -117,6 +145,8 @@ isMsoComment('<p>hello</p>');    // false
 | `mso <version>` | `<!--[if mso 16]>` | Exact Outlook version |
 | `<op> mso <version>` | `<!--[if gte mso 14]>` | Version comparison |
 | `!mso <version>` | `<!--[if !mso 16]>` | Not this version |
+| `IE` / `!IE` | `<!--[if IE]>` | Legacy Internet Explorer conditions |
+| `<op> IE <version>` | `<!--[if gte IE 8]>` | IE version comparison |
 | Compound `&` / `\|` | `<!--[if (gt mso 9)&(lte mso 11)]>` | AND / OR |
 
 **Valid operators:** `gte`, `gt`, `lte`, `lt`, `eq`
