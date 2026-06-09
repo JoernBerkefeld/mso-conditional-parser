@@ -1,6 +1,6 @@
 {
     "name": "mso-conditional-parser",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Parser and translator for MSO (Outlook) conditional comments in HTML email",
     "type": "module",
     "main": "src/index.js",
