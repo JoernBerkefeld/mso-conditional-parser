@@ -162,7 +162,7 @@ function assessCondition(condition) {
         return null;
     }
 
-    if (trimmed === 'mso' || trimmed === '!mso' || trimmed === 'IE' || trimmed === '!IE') {
+    if (['mso', '!mso', 'IE', '!IE'].includes(trimmed)) {
         return null;
     }
 
@@ -261,11 +261,11 @@ export function getConditionFix(condition) {
  *
  * Returns `null` if the input is not a recognizable MSO opener.
  *
- * @param {string} str - Raw HTML comment string (trimmed).
+ * @param {string} string_ - Raw HTML comment string (trimmed).
  * @returns {{ type: string, condition: string, translation: string, isValid: boolean, error?: string } | null} Parsed opener object, or null if not an MSO opener.
  */
-export function parseMsoComment(str) {
-    const trimmed = str.trim();
+export function parseMsoComment(string_) {
+    const trimmed = string_.trim();
 
     // Downlevel-revealed non-standard: <![if condition]>
     const revealedMatch = REVEALED_OPENER_RE.exec(trimmed);
@@ -277,12 +277,10 @@ export function parseMsoComment(str) {
             condition,
             translation: translateCondition(condition),
             isValid: !assessment,
-            ...(assessment
-                ? {
-                      error: assessment.error,
-                      ...(assessment.fix ? { conditionFix: assessment.fix } : {}),
-                  }
-                : {}),
+            ...(assessment && {
+                error: assessment.error,
+                ...(assessment.fix && { conditionFix: assessment.fix }),
+            }),
         };
     }
 
@@ -297,12 +295,10 @@ export function parseMsoComment(str) {
             condition,
             translation: translateCondition(condition),
             isValid: !assessment,
-            ...(assessment
-                ? {
-                      error: assessment.error,
-                      ...(assessment.fix ? { conditionFix: assessment.fix } : {}),
-                  }
-                : {}),
+            ...(assessment && {
+                error: assessment.error,
+                ...(assessment.fix && { conditionFix: assessment.fix }),
+            }),
         };
     }
 
@@ -319,11 +315,11 @@ export function parseMsoComment(str) {
  *
  * Returns `null` if the input is not a recognizable MSO closer.
  *
- * @param {string} str - Raw HTML comment string (trimmed).
+ * @param {string} string_ - Raw HTML comment string (trimmed).
  * @returns {{ type: string, isClosing: true } | null} Parsed closer object, or null if not an MSO closer.
  */
-export function parseMsoEndComment(str) {
-    const trimmed = str.trim();
+export function parseMsoEndComment(string_) {
+    const trimmed = string_.trim();
 
     if (HIDDEN_CLOSER_RE.test(trimmed)) {
         return { type: 'downlevel-hidden-end', isClosing: true };
@@ -339,9 +335,9 @@ export function parseMsoEndComment(str) {
 /**
  * Returns true if the string is any MSO comment — opener or closer.
  *
- * @param {string} str - Raw HTML comment string.
+ * @param {string} string_ - Raw HTML comment string.
  * @returns {boolean} True if the string is a recognized MSO comment opener or closer.
  */
-export function isMsoComment(str) {
-    return parseMsoComment(str) !== null || parseMsoEndComment(str) !== null;
+export function isMsoComment(string_) {
+    return parseMsoComment(string_) !== null || parseMsoEndComment(string_) !== null;
 }
