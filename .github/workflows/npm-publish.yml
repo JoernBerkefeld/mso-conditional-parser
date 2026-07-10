@@ -14,11 +14,18 @@ permissions:
 jobs:
     build:
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: true
+            matrix:
+                node: [22, 23, 24, 25]
+        name: lint & test w/ node v${{ matrix.node }}
+        permissions:
+            contents: read
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
             - uses: actions/setup-node@v6
               with:
-                  node-version-file: ./package.json
+                  node-version: ${{ matrix.node }}
 
             - run: npm ci --no-workspaces
             - run: npm run lint
@@ -28,7 +35,7 @@ jobs:
         needs: build
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
             - uses: actions/setup-node@v6
               with:
                   node-version-file: ./package.json
